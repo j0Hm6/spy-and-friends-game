@@ -26,7 +26,7 @@ interface GameState {
 // Game actions type definition
 interface GameActions {
   // Player management
-  addPlayer: (name: string) => void;
+  addPlayer: (name: string, id?: string) => void;
   removePlayer: (id: string) => void;
   resetGame: () => void;
   
@@ -56,18 +56,18 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
   spyPlayerId: null,
   
   // Player management
-  addPlayer: (name) => {
-    // Generate a random ID and set local player ID if not set
-    const id = Math.random().toString(36).substring(2, 9);
+  addPlayer: (name, id) => {
+    // Generate a random ID or use provided ID
+    const playerId = id || Math.random().toString(36).substring(2, 9);
     if (get().localPlayerId === null) {
-      set({ localPlayerId: id });
+      set({ localPlayerId: playerId });
     }
     
     set((state) => ({
       players: {
         ...state.players,
-        [id]: {
-          id,
+        [playerId]: {
+          id: playerId,
           name,
           isReady: true,
           isConnected: true
@@ -102,7 +102,6 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     });
   },
   
-  // Game flow
   startGame: () => {
     const players = Object.values(get().players);
     if (players.length < 2) return;
@@ -139,7 +138,6 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     set({ gameStage: 'voting', currentVotes: {} });
   },
   
-  // Voting
   submitVote: (targetPlayerId) => {
     const localPlayerId = get().localPlayerId;
     if (!localPlayerId) return;
@@ -164,7 +162,6 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     }
   },
   
-  // Getters
   getLocalPlayer: () => {
     const localPlayerId = get().localPlayerId;
     return localPlayerId ? get().players[localPlayerId] : null;
