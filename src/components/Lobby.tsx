@@ -1,18 +1,80 @@
 
 import { Button } from '@/components/ui/button';
 import { useGameStore } from '@/hooks/use-game-store';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
+import { toast } from 'sonner';
 
 export const Lobby = () => {
   // Use stable selectors to avoid unnecessary rerenders
   const players = useGameStore(state => state.players);
   const startGame = useGameStore(state => state.startGame);
+  const addPlayer = useGameStore(state => state.addPlayer);
+  const localPlayerId = useGameStore(state => state.localPlayerId);
   
   // Derive players array and game ready state from the players object
   const playersArray = useMemo(() => Object.values(players), [players]);
   const isGameReady = useMemo(() => {
     return playersArray.length >= 2;
   }, [playersArray.length]);
+  
+  // Effect to synchronize players between clients using URL hash
+  useEffect(() => {
+    // Only the first player to join a game should set the game ID
+    if (playersArray.length === 1 && window.location.hash === '') {
+      const gameId = Math.random().toString(36).substring(2, 9);
+      window.location.hash = gameId;
+      localStorage.setItem('gameId', gameId);
+    }
+    
+    // If joining an existing game (via shared link with hash)
+    if (window.location.hash && playersArray.length === 1) {
+      const gameId = window.location.hash.substring(1);
+      localStorage.setItem('gameId', gameId);
+      
+      // Show a toast when joining an existing game
+      toast.success("You've joined an existing game lobby!");
+    }
+    
+    // Create a function to sync the local player to the URL for other clients to detect
+    const syncPlayerToUrl = () => {
+      if (localPlayerId) {
+        const playerData = players[localPlayerId];
+        if (playerData) {
+          const playerParam = `player=${encodeURIComponent(JSON.stringify(playerData))}`;
+          const url = new URL(window.location.href);
+          url.searchParams.set(localPlayerId, playerParam);
+          window.history.replaceState({}, '', url);
+        }
+      }
+    };
+    
+    // Initial sync of player data
+    syncPlayerToUrl();
+    
+    // Poll URL parameters to detect new players from other clients
+    const pollInterval = setInterval(() => {
+      // Get other client players from URL parameters
+      const url = new URL(window.location.href);
+      url.searchParams.forEach((value, key) => {
+        if (key !== localPlayerId && value.startsWith('player=')) {
+          try {
+            const playerData = JSON.parse(decodeURIComponent(value.substring(7)));
+            // Add player if not already in the store
+            if (playerData.id && !players[playerData.id]) {
+              addPlayer(playerData.name, playerData.id);
+            }
+          } catch (e) {
+            console.error('Error parsing player data:', e);
+          }
+        }
+      });
+      
+      // Update our player in the URL
+      syncPlayerToUrl();
+    }, 2000); // Check every 2 seconds
+    
+    return () => clearInterval(pollInterval);
+  }, [players, localPlayerId, playersArray.length, addPlayer]);
   
   return (
     <div className="space-y-6 text-center">
