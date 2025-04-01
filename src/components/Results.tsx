@@ -1,7 +1,7 @@
 
 import { Button } from '@/components/ui/button';
 import { useGameStore } from '@/hooks/use-game-store';
-import { Award, Rotate } from 'lucide-react';
+import { Award, RotateCcw } from 'lucide-react';
 
 export const Results = () => {
   const mostVotedPlayer = useGameStore(state => state.getMostVotedPlayer());
@@ -76,7 +76,7 @@ export const Results = () => {
         </ul>
         
         <Button onClick={resetGame} className="w-full game-button flex items-center justify-center gap-2">
-          <Rotate size={18} />
+          <RotateCcw size={18} />
           <span>Play Again</span>
         </Button>
       </div>
