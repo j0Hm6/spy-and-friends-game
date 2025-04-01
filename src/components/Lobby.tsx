@@ -1,11 +1,16 @@
 
 import { Button } from '@/components/ui/button';
 import { useGameStore } from '@/hooks/use-game-store';
+import { useMemo } from 'react';
 
 export const Lobby = () => {
   const players = useGameStore(state => state.getPlayersArray());
   const startGame = useGameStore(state => state.startGame);
-  const isGameReady = useGameStore(state => state.isGameReady());
+  
+  // Use useMemo to avoid re-computing on every render
+  const isGameReady = useMemo(() => {
+    return players.length >= 2;
+  }, [players.length]);
   
   return (
     <div className="space-y-6 text-center">
